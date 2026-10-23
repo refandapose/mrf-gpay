@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Form Merchant QRIS GPay</title>
+<style>
+  :root{
+    --blue:#1a73e8;--green:#34a853;--red:#ea4335;--orange:#ff9800;
+    --border:#dadce0;--text:#202124;--muted:#5f6368;
+    --radius:12px;--shadow:0 2px 8px rgba(0,0,0,0.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;}
+
+  /* TOP BAR */
+  .top-bar{color:white;padding:14px 18px;display:flex;align-items:center;gap:12px;
+    position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.25);
+    transition:background .4s;}
+  .top-bar.mode-new{background:linear-gradient(135deg,#1a73e8,#0d47a1);}
+  .top-bar.mode-add{background:linear-gradient(135deg,#34a853,#1b5e20);}
+  .top-bar .logo{font-size:22px;}
+  .top-bar h1{font-size:15px;font-weight:700;line-height:1.2;}
+  .top-bar p{font-size:11px;opacity:.85;}
+  .top-bar a{margin-left:auto;color:white;text-decoration:none;
+    background:rgba(255,255,255,.2);padding:7px 12px;border-radius:8px;font-size:12px;}
+
+  /* MODE TOGGLE */
+  .mode-toggle{display:flex;background:white;border-radius:var(--radius);
+    box-shadow:var(--shadow);overflow:hidden;margin:14px 0 0;}
+  .mode-btn{flex:1;padding:14px;border:none;background:none;cursor:pointer;
+    font-size:14px;font-weight:600;color:var(--muted);transition:all .2s;
+    display:flex;align-items:center;justify-content:center;gap:8px;}
+  .mode-btn.active-new{background:linear-gradient(135deg,#1a73e8,#0d47a1);color:white;}
+  .mode-btn.active-add{background:linear-gradient(135deg,#34a853,#1b5e20);color:white;}
+  .mode-btn:not(.active-new):not(.active-add):hover{background:#f5f5f5;}
+
+  .container{max-width:680px;margin:0 auto;padding:0 14px 40px;}
+
+  .progress-bar{height:4px;background:var(--border);border-radius:2px;margin:14px 0 0;}
+  .progress-fill{height:100%;border-radius:2px;transition:width .3s,background .4s;width:0%;}
+  .mode-new-active .progress-fill{background:var(--blue);}
+  .mode-add-active .progress-fill{background:var(--green);}
+
+  /* FORMS */
+  #formNew, #formAdd{display:none;}
+  #formNew.active, #formAdd.active{display:block;}
+
+  .section-card{background:white;border-radius:var(--radius);box-shadow:var(--shadow);
+    margin-top:14px;overflow:hidden;}
+  .section-header{padding:13px 17px;display:flex;align-items:center;gap:10px;
+    border-bottom:1px solid var(--border);}
+  .section-header.legalitas{background:#e8f0fe;}
+  .section-header.store{background:#e6f4ea;}
+  .section-header.dokumen{background:#fce8e6;}
+  .section-header.foto{background:#fff3e0;}
+  .section-header h2{font-size:14px;font-weight:700;}
+  .section-header .ico{font-size:18px;}
+  .section-body{padding:15px 17px;display:flex;flex-direction:column;gap:13px;}
+
+  .field-row{display:flex;flex-direction:column;gap:4px;}
+  .field-row label{font-size:13px;font-weight:600;}
+  .field-row label .req{color:var(--red);margin-left:2px;}
+  .field-row .hint{font-size:11px;color:var(--muted);}
+
+  input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);
+    border-radius:8px;font-size:14px;color:var(--text);background:white;
+    transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;}
+  input:focus,select:focus,textarea:focus{outline:none;}
+  .mode-new-active input:focus,.mode-new-active select:focus,.mode-new-active textarea:focus{
+    border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,115,232,.15);}
+  .mode-add-active input:focus,.mode-add-active select:focus,.mode-add-active textarea:focus{
+    border-color:var(--green);box-shadow:0 0 0 3px rgba(52,168,83,.15);}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235f6368' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;cursor:pointer;}
+  textarea{resize:vertical;min-height:76px;}
+
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+  .ownership-toggle{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .ownership-btn input[type=radio]{display:none;}
+  .ownership-btn label{display:flex;align-items:center;justify-content:center;gap:8px;
+    padding:13px;border:2px solid var(--border);border-radius:10px;
+    font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;background:white;}
+  .ownership-btn input[type=radio]:checked + label.individual{
+    background:#e8f0fe;border-color:var(--blue);color:var(--blue);}
+  .ownership-btn input[type=radio]:checked + label.business{
+    background:#e6f4ea;border-color:var(--green);color:var(--green);}
+
+  .individual-only,.business-only{display:none;}
+  body.show-individual .individual-only{display:flex;flex-direction:column;gap:13px;}
+  body.show-business .business-only{display:flex;flex-direction:column;gap:13px;}
+
+  .submit-section{padding:16px;}
+  .btn-submit{width:100%;padding:15px;color:white;border:none;border-radius:10px;
+    font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s;
+    display:flex;align-items:center;justify-content:center;gap:8px;}
+  .btn-submit:hover{opacity:.9;}
+  .btn-submit:disabled{opacity:.6;cursor:not-allowed;}
+  .mode-new-active .btn-submit{background:linear-gradient(135deg,#1a73e8,#0d47a1);}
+  .mode-add-active .btn-submit{background:linear-gradient(135deg,#34a853,#1b5e20);}
+
+  .info-box{font-size:12px;color:var(--muted);background:#fff3e0;padding:10px 12px;
+    border-radius:8px;border-left:3px solid var(--orange);}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:#323232;color:white;padding:12px 22px;border-radius:10px;
+    font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;
+    white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.3);}
+  .toast.show{opacity:1;}
+  .toast.success{background:var(--green);}
+  .toast.error{background:var(--red);}
+
+  @media(max-width:480px){
+    .two-col{grid-template-columns:1fr;}
+    .three-col{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body class="mode-new-active">
+
+<div class="top-bar mode-new" id="topBar">
+  <div class="logo" id="topLogo">🆕</div>
+  <div>
+    <h1 id="topTitle">New Merchant</h1>
+    <p id="topSubtitle">Pendaftaran merchant baru QRIS GPay</p>
+  </div>
+  <a href="/">🏠 Portal</a>
+</div>
+
+<div class="container">
+
+  <!-- MODE TOGGLE -->
+  <div class="mode-toggle">
+    <button class="mode-btn active-new" id="btnNew" onclick="switchMode('new')">
+      🆕 New Merchant
+    </button>
+    <button class="mode-btn" id="btnAdd" onclick="switchMode('add')">
+      ➕ Adding Store
+    </button>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+  <!-- ═══════════════════════════════════════════════════
+       FORM A: NEW MERCHANT
+  ════════════════════════════════════════════════════ -->
+  <form id="formNew" class="active" novalidate>
+    <input type="hidden" name="indicator" value="New Merchant">
+
+    <!-- LEGALITAS -->
+    <div class="section-card">
+      <div class="section-header legalitas">
+        <span class="ico">📄</span><h2>Info Legalitas & Pemilik</h2>
+      </div>
+      <div class="section-body">
+
+        <div class="field-row">
+          <label>Tipe Kepemilikan <span class="req">*</span></label>
+          <div class="ownership-toggle">
+            <div class="ownership-btn">
+              <input type="radio" name="ownership_status" id="own_ind" value="Individual" required>
+              <label for="own_ind" class="individual">👤 Individual</label>
+            </div>
+            <div class="ownership-btn">
+              <input type="radio" name="ownership_status" id="own_biz" value="Business">
+              <label for="own_biz" class="business">🏢 Business</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label>Kategori 1 <span class="req">*</span></label>
+          <select name="categori_1" required>
+            <option value="">-- Pilih --</option>
+            <option>NON GRUP</option><option>MAP</option>
+          </select>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Kategori 2</label>
+            <select name="categori_2">
+              <option value="">-- Pilih --</option>
+              <option>ENTERPRISE SMALL</option><option>ENTERPRISE MEDIUM</option>
+              <option>ENTERPRISE LARGE</option><option>SME</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Kategori 3</label>
+            <input type="text" name="categori_3" placeholder="Opsional">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label>Nama PIC (Sales/Agen) <span class="req">*</span></label>
+          <input type="text" name="nama_pic" placeholder="Nama lengkap PIC" required>
+        </div>
+
+        <div class="field-row">
+          <label>Nama Brand / Merchant Name <span class="req">*</span></label>
+          <input type="text" name="nama_brand" maxlength="50" placeholder="Maks 50 karakter" required>
+          <span class="hint">Nama yang tampil di QRIS. Maks 50 karakter.</span>
+        </div>
+
+        <div class="two-col">
+          <div class="field-row">
+            <label>Jenis Identitas <span class="req">*</span></label>
+            <select name="jenis_identitas" required>
+              <option value="">-- Pilih --</option>
+              <option>KTP</option><option>NPWP</option>
+              <option>Passport</option><option>KITAS</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Nomor Identitas <span class="req">*</span></label>
+            <input type="text" name="no_identitas" placeholder="Nomor identitas" required>
+            <span class="hint">KTP: 16 digit</span>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label>Nama Pemilik <span class="req">*</span></label>
+          <input type="text" name="nama_pemilik" placeholder="Nama lengkap pemilik" required>
+        </div>
+
+        <div class="field-row">
+          <label>Alamat Pemilik <span class="req">*</span></label>
+          <textarea name="alamat_pemilik" placeholder="Alamat lengkap pemilik" required></textarea>
+        </div>
+
+        <div class="two-col">
+          <div class="field-row">
+            <label>Provinsi Pemilik <span class="req">*</span></label>
+            <select name="provinsi_pemilik" required>
+              <option value="">-- Pilih --</option>
+              <option>Aceh</option><option>Bali</option><option>Bangka Belitung</option>
+              <option>Banten</option><option>Bengkulu</option><option>D.I. Yogyakarta</option>
+              <option>D.K.I. Jakarta</option><option>Gorontalo</option><option>Jambi</option>
+              <option>Jawa Barat</option><option>Jawa Tengah</option><option>Jawa Timur</option>
+              <option>Kalimantan Barat</option><option>Kalimantan Selatan</option>
+              <option>Kalimantan Tengah</option><option>Kalimantan Timur</option>
+              <option>Kalimantan Utara</option><option>Kepulauan Riau</option>
+              <option>Kepulauan Seribu</option><option>Lampung</option><option>Maluku</option>
+              <option>Maluku Utara</option><option>Nusa Tenggara Barat</option>
+              <option>Nusa Tenggara Timur</option><option>Papua</option><option>Papua Barat</option>
+              <option>Riau</option><option>Sulawesi Barat</option><option>Sulawesi Selatan</option>
+              <option>Sulawesi Tengah</option><option>Sulawesi Tenggara</option>
+              <option>Sulawesi Utara</option><option>Sumatera Barat</option>
+              <option>Sumatera Selatan</option><option>Sumatera Utara</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Kode Pos Pemilik</label>
+            <input type="text" name="kode_pos_pemilik" placeholder="Kode pos" maxlength="5">
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="field-row">
+            <label>Nomor Kontak Pemilik <span class="req">*</span></label>
+            <input type="tel" name="nomor_kontak_pemilik" placeholder="08xxxxxxxxxx" required>
+          </div>
+          <div class="field-row">
+            <label>Email Pemilik <span class="req">*</span></label>
+            <input type="email" name="email_pemilik" placeholder="email@domain.com" required>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label>Kriteria / Ukuran Merchant <span class="req">*</span></label>
+          <select name="kriteria_merchant" required>
+            <option value="">-- Pilih --</option>
+            <option value="UMI">UMI — Aset maks 50jt</option>
+            <option value="UKE">UKE — Aset 50jt–500jt</option>
+            <option value="UME">UME — Aset 500jt–10M</option>
+            <option value="UBE">UBE — Aset di atas 10M</option>
+            <option value="URE">URE — Lembaga pemerintah / sosial</option>
+          </select>
+        </div>
+        <input type="hidden" name="mdr" value="0.007">
+      </div>
+    </div>
+
+    <!-- INFO STORE -->
+    <div class="section-card">
+      <div class="section-header store">
+        <span class="ico">🏪</span><h2>Info Store</h2>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <label>Fullname Store <span class="req">*</span></label>
+          <input type="text" name="fullname_store" maxlength="50" placeholder="Nama lengkap store, maks 50 karakter" required>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Store Code</label>
+            <input type="text" name="store_code" placeholder="Kode store (jika ada)">
+          </div>
+          <div class="field-row">
+            <label>Username Merchant Apps</label>
+            <input type="text" name="username_merchant" placeholder="Username di apps">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Category MCC <span class="req">*</span></label>
+            <select name="category_mcc" id="mccNew" required onchange="updateMcc('mccDetailNew',this.value)">
+              <option value="">-- Pilih --</option>
+              <option value="FOOD_BEVERAGE">FOOD &amp; BEVERAGE</option>
+              <option value="SHOPPING">SHOPPING</option><option value="AUTOMOTIVE">AUTOMOTIVE</option>
+              <option value="ENTERTAIMENT">ENTERTAINMENT</option><option value="TRANSPORT">TRANSPORT</option>
+              <option value="TRAVELLING">TRAVELLING</option><option value="FASHION_AND_ACC">FASHION &amp; ACC</option>
+              <option value="SPORT">SPORT</option><option value="HEALTH">HEALTH</option>
+              <option value="EDUCATION">EDUCATION</option><option value="DONATION SOCIAL">DONATION SOCIAL</option>
+              <option value="G2P (BANSOS)">G2P (BANSOS)</option><option value="SPBU">SPBU</option>
+              <option value="P2G NASIONAL DAN DAERAH">P2G NASIONAL DAN DAERAH</option>
+              <option value="BEAUTY">BEAUTY</option><option value="EXPEDITION">EXPEDITION</option>
+              <option value="ELECTRONIC">ELECTRONIC</option><option value="SERVICES">SERVICES</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Detail MCC <span class="req">*</span></label>
+            <select name="detail_mcc" id="mccDetailNew" required>
+              <option value="">-- Pilih Category dulu --</option>
+            </select>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Location Store</label>
+            <select name="location_store">
+              <option value="">-- Pilih --</option>
+              <option>Mall</option><option>Kaki Lima</option><option>Ruko</option>
+              <option>Gedung Perkantoran</option><option>Pasar</option>
+              <option>Rumah / Toko Rumahan</option><option>Hotel</option>
+              <option>Sekolah / Kampus</option><option>Rumah Sakit / Klinik</option>
+              <option>Online</option><option>Lainnya</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Detail Lokasi Store</label>
+            <input type="text" name="detail_lokasi_store" placeholder="Gedung/landmark terdekat">
+          </div>
+        </div>
+        <div class="field-row">
+          <label>Alamat Store <span class="req">*</span></label>
+          <textarea name="alamat_store" placeholder="Alamat lengkap store" required></textarea>
+        </div>
+        <div class="three-col">
+          <div class="field-row">
+            <label>Provinsi Store <span class="req">*</span></label>
+            <select name="provinsi_store" required>
+              <option value="">-- Pilih --</option>
+              <option>Aceh</option><option>Bali</option><option>Bangka Belitung</option>
+              <option>Banten</option><option>Bengkulu</option><option>D.I. Yogyakarta</option>
+              <option>D.K.I. Jakarta</option><option>Gorontalo</option><option>Jambi</option>
+              <option>Jawa Barat</option><option>Jawa Tengah</option><option>Jawa Timur</option>
+              <option>Kalimantan Barat</option><option>Kalimantan Selatan</option>
+              <option>Kalimantan Tengah</option><option>Kalimantan Timur</option>
+              <option>Kalimantan Utara</option><option>Kepulauan Riau</option>
+              <option>Kepulauan Seribu</option><option>Lampung</option><option>Maluku</option>
+              <option>Maluku Utara</option><option>Nusa Tenggara Barat</option>
+              <option>Nusa Tenggara Timur</option><option>Papua</option><option>Papua Barat</option>
+              <option>Riau</option><option>Sulawesi Barat</option><option>Sulawesi Selatan</option>
+              <option>Sulawesi Tengah</option><option>Sulawesi Tenggara</option>
+              <option>Sulawesi Utara</option><option>Sumatera Barat</option>
+              <option>Sumatera Selatan</option><option>Sumatera Utara</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Kota Store <span class="req">*</span></label>
+            <input type="text" name="kota_store" placeholder="Nama kota" required>
+          </div>
+          <div class="field-row">
+            <label>Kodepos Store</label>
+            <input type="text" name="kodepos_store" placeholder="Kodepos" maxlength="5">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Nama PIC Store <span class="req">*</span></label>
+            <input type="text" name="nama_pic_store" placeholder="Nama PIC di store" required>
+          </div>
+          <div class="field-row">
+            <label>No PIC Store <span class="req">*</span></label>
+            <input type="tel" name="no_pic_store" placeholder="08xxxxxxxxxx" required>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Nomor Notifikasi</label>
+            <input type="tel" name="nomor_notifikasi" placeholder="08xxxxxxxxxx">
+          </div>
+          <div class="field-row">
+            <label>Email Notifikasi</label>
+            <input type="email" name="email_notifikasi" placeholder="email@domain.com">
+          </div>
+        </div>
+        <div class="field-row">
+          <label>Nama Bank Rekening <span class="req">*</span></label>
+          <select name="nama_bank" required>
+            <option value="">-- Pilih Bank --</option>
+            <option>BCA</option><option>BRI</option><option>BNI</option><option>Mandiri</option>
+            <option>BSI</option><option>CIMB Niaga</option><option>Danamon</option><option>Permata</option>
+            <option>BTN</option><option>OCBC NISP</option><option>Maybank</option><option>Panin</option>
+            <option>Bukopin</option><option>Bank Mega</option><option>Bank Jatim</option>
+            <option>Bank Jateng</option><option>Bank DKI</option><option>Bank Jabar Banten</option>
+            <option>Bank Sumut</option><option>Bank Aceh</option><option>Bank Riau Kepri</option>
+            <option>Bank Kalsel</option><option>Bank Kaltimtara</option><option>Bank NTB Syariah</option>
+            <option>Bank Sulselbar</option><option>Bank Papua</option><option>Lainnya</option>
+          </select>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Nomor Rekening <span class="req">*</span></label>
+            <input type="text" name="nomor_rekening" placeholder="Nomor rekening" required>
+          </div>
+          <div class="field-row">
+            <label>Nama Rekening <span class="req">*</span></label>
+            <input type="text" name="nama_rekening" placeholder="Nama sesuai rekening" required>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Latitude <span class="req">*</span></label>
+            <input type="text" name="latitude" placeholder="-6.2106" required>
+            <span class="hint">Klik kanan di Google Maps → Salin koordinat</span>
+          </div>
+          <div class="field-row">
+            <label>Longitude <span class="req">*</span></label>
+            <input type="text" name="longitude" placeholder="106.8187" required>
+          </div>
+        </div>
+        <input type="hidden" name="device_installation" value="EDC">
+        <div class="field-row">
+          <label>Jumlah QRIS <span class="req">*</span></label>
+          <input type="number" name="jumlah_device" placeholder="Contoh: 1" min="1" required>
+        </div>
+        <div class="field-row">
+          <label>Dashboard Merchant</label>
+          <select name="dashboard_merchant">
+            <option value="">-- Pilih --</option>
+            <option value="YA">YA</option><option value="TIDAK">TIDAK</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOKUMEN NEW MERCHANT -->
+    <div class="section-card">
+      <div class="section-header dokumen">
+        <span class="ico">📎</span><h2>Dokumen Legalitas</h2>
+      </div>
+      <div class="section-body">
+        <p class="info-box">📌 Upload ke <strong>Google Drive</strong> merchant, lalu paste link di bawah.</p>
+
+        <div class="individual-only">
+          <div class="field-row">
+            <label>Link KTP <span class="req">*</span></label>
+            <input type="url" name="doc_ktp" placeholder="https://drive.google.com/..." class="req-individual">
+          </div>
+          <div class="field-row">
+            <label>Link NPWP <span style="font-size:11px;color:var(--muted)">(opsional)</span></label>
+            <input type="url" name="doc_npwp" placeholder="https://drive.google.com/...">
+          </div>
+          <div class="field-row">
+            <label>Link Foto Merchant <span class="req">*</span></label>
+            <input type="url" name="foto_merchant" placeholder="https://drive.google.com/..." class="req-individual">
+            <span class="hint">Foto tampak depan toko</span>
+          </div>
+          <div class="field-row">
+            <label>Link Foto Plang Merchant <span class="req">*</span></label>
+            <input type="url" name="foto_plang" placeholder="https://drive.google.com/..." class="req-individual">
+          </div>
+        </div>
+
+        <div class="business-only">
+          <div class="field-row">
+            <label>Link KTP Direktur/Pemilik (PDF) <span class="req">*</span></label>
+            <input type="url" name="doc_ktp_pdf" placeholder="https://drive.google.com/..." class="req-business">
+          </div>
+          <div class="field-row">
+            <label>Link NIB / TDP (PDF) <span class="req">*</span></label>
+            <input type="url" name="doc_tdp_nib" placeholder="https://drive.google.com/..." class="req-business">
+          </div>
+          <div class="field-row">
+            <label>Link NPWP Perusahaan (PDF) <span class="req">*</span></label>
+            <input type="url" name="doc_npwp_pdf" placeholder="https://drive.google.com/..." class="req-business">
+          </div>
+          <div class="field-row">
+            <label>Link Izin Usaha (PDF)</label>
+            <input type="url" name="doc_izin_usaha" placeholder="https://drive.google.com/...">
+          </div>
+          <div class="field-row">
+            <label>Link Akta Pendirian (PDF)</label>
+            <input type="url" name="doc_akta_pendirian" placeholder="https://drive.google.com/...">
+          </div>
+          <div class="field-row">
+            <label>Link SK Kemenkumham (PDF)</label>
+            <input type="url" name="doc_sk_kemenkumham" placeholder="https://drive.google.com/...">
+          </div>
+          <div class="field-row">
+            <label>Link Buku Tabungan (PDF)</label>
+            <input type="url" name="doc_buku_tabungan_pdf" placeholder="https://drive.google.com/...">
+          </div>
+          <div class="field-row">
+            <label>Link Akta Perubahan (jika ada)</label>
+            <input type="url" name="doc_akta_perubahan" placeholder="https://drive.google.com/...">
+          </div>
+          <div class="field-row">
+            <label>Link Surat Kuasa (jika ada)</label>
+            <input type="url" name="doc_surat_kuasa" placeholder="https://drive.google.com/...">
+          </div>
+          <div class="field-row">
+            <label>Link Foto Merchant <span class="req">*</span></label>
+            <input type="url" name="foto_merchant" placeholder="https://drive.google.com/..." class="req-business">
+          </div>
+          <div class="field-row">
+            <label>Link Foto Plang Merchant <span class="req">*</span></label>
+            <input type="url" name="foto_plang" placeholder="https://drive.google.com/..." class="req-business">
+          </div>
+        </div>
+
+        <div id="docPlaceholder" style="text-align:center;padding:16px;color:var(--muted);font-size:13px;">
+          ⬆️ Pilih tipe kepemilikan di atas untuk melihat dokumen yang dibutuhkan
+        </div>
+      </div>
+      <div class="submit-section">
+        <button type="submit" class="btn-submit" id="submitNew">
+          <span>📤</span> Kirim Data New Merchant
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- ═══════════════════════════════════════════════════
+       FORM B: ADDING STORE
+  ════════════════════════════════════════════════════ -->
+  <form id="formAdd" novalidate>
+    <input type="hidden" name="indicator" value="Adding Store">
+    <input type="hidden" name="mdr" value="0.007">
+    <input type="hidden" name="device_installation" value="EDC">
+
+    <!-- IDENTITAS -->
+    <div class="section-card">
+      <div class="section-header store">
+        <span class="ico">🏢</span><h2>Identitas Merchant</h2>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <label>Nama Brand / Merchant Name <span class="req">*</span></label>
+          <input type="text" name="nama_brand" maxlength="50" placeholder="Nama brand yang sudah terdaftar" required>
+          <span class="hint">Harus sama dengan yang sudah terdaftar sebelumnya</span>
+        </div>
+        <div class="field-row">
+          <label>Nama PIC (Sales/Agen) <span class="req">*</span></label>
+          <input type="text" name="nama_pic" placeholder="Nama lengkap PIC" required>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Kategori 1 <span class="req">*</span></label>
+            <select name="categori_1" required>
+              <option value="">-- Pilih --</option>
+              <option>NON GRUP</option><option>MAP</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Kategori 2</label>
+            <select name="categori_2">
+              <option value="">-- Pilih --</option>
+              <option>ENTERPRISE SMALL</option><option>ENTERPRISE MEDIUM</option>
+              <option>ENTERPRISE LARGE</option><option>SME</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <label>Tipe Kepemilikan <span class="req">*</span></label>
+          <select name="ownership_status" required>
+            <option value="">-- Pilih --</option>
+            <option value="Individual">Individual</option>
+            <option value="Business">Business</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label>Kriteria / Ukuran Merchant <span class="req">*</span></label>
+          <select name="kriteria_merchant" required>
+            <option value="">-- Pilih --</option>
+            <option value="UMI">UMI — Aset maks 50jt</option>
+            <option value="UKE">UKE — Aset 50jt–500jt</option>
+            <option value="UME">UME — Aset 500jt–10M</option>
+            <option value="UBE">UBE — Aset di atas 10M</option>
+            <option value="URE">URE — Lembaga pemerintah / sosial</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFO STORE -->
+    <div class="section-card">
+      <div class="section-header store">
+        <span class="ico">🏪</span><h2>Info Store Baru</h2>
+      </div>
+      <div class="section-body">
+        <div class="field-row">
+          <label>Fullname Store <span class="req">*</span></label>
+          <input type="text" name="fullname_store" maxlength="50" placeholder="Nama lengkap store baru, maks 50 karakter" required>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Store Code</label>
+            <input type="text" name="store_code" placeholder="Kode store">
+          </div>
+          <div class="field-row">
+            <label>Username Merchant Apps</label>
+            <input type="text" name="username_merchant" placeholder="Username">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Category MCC <span class="req">*</span></label>
+            <select name="category_mcc" id="mccAdd" required onchange="updateMcc('mccDetailAdd',this.value)">
+              <option value="">-- Pilih --</option>
+              <option value="FOOD_BEVERAGE">FOOD &amp; BEVERAGE</option>
+              <option value="SHOPPING">SHOPPING</option><option value="AUTOMOTIVE">AUTOMOTIVE</option>
+              <option value="ENTERTAIMENT">ENTERTAINMENT</option><option value="TRANSPORT">TRANSPORT</option>
+              <option value="TRAVELLING">TRAVELLING</option><option value="FASHION_AND_ACC">FASHION &amp; ACC</option>
+              <option value="SPORT">SPORT</option><option value="HEALTH">HEALTH</option>
+              <option value="EDUCATION">EDUCATION</option><option value="DONATION SOCIAL">DONATION SOCIAL</option>
+              <option value="G2P (BANSOS)">G2P (BANSOS)</option><option value="SPBU">SPBU</option>
+              <option value="P2G NASIONAL DAN DAERAH">P2G NASIONAL DAN DAERAH</option>
+              <option value="BEAUTY">BEAUTY</option><option value="EXPEDITION">EXPEDITION</option>
+              <option value="ELECTRONIC">ELECTRONIC</option><option value="SERVICES">SERVICES</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Detail MCC <span class="req">*</span></label>
+            <select name="detail_mcc" id="mccDetailAdd" required>
+              <option value="">-- Pilih Category dulu --</option>
+            </select>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Location Store</label>
+            <select name="location_store">
+              <option value="">-- Pilih --</option>
+              <option>Mall</option><option>Kaki Lima</option><option>Ruko</option>
+              <option>Gedung Perkantoran</option><option>Pasar</option>
+              <option>Rumah / Toko Rumahan</option><option>Hotel</option>
+              <option>Sekolah / Kampus</option><option>Rumah Sakit / Klinik</option>
+              <option>Online</option><option>Lainnya</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Detail Lokasi Store</label>
+            <input type="text" name="detail_lokasi_store" placeholder="Gedung/landmark">
+          </div>
+        </div>
+        <div class="field-row">
+          <label>Alamat Store <span class="req">*</span></label>
+          <textarea name="alamat_store" placeholder="Alamat lengkap store baru" required></textarea>
+        </div>
+        <div class="three-col">
+          <div class="field-row">
+            <label>Provinsi Store <span class="req">*</span></label>
+            <select name="provinsi_store" required>
+              <option value="">-- Pilih --</option>
+              <option>Aceh</option><option>Bali</option><option>Bangka Belitung</option>
+              <option>Banten</option><option>Bengkulu</option><option>D.I. Yogyakarta</option>
+              <option>D.K.I. Jakarta</option><option>Gorontalo</option><option>Jambi</option>
+              <option>Jawa Barat</option><option>Jawa Tengah</option><option>Jawa Timur</option>
+              <option>Kalimantan Barat</option><option>Kalimantan Selatan</option>
+              <option>Kalimantan Tengah</option><option>Kalimantan Timur</option>
+              <option>Kalimantan Utara</option><option>Kepulauan Riau</option>
+              <option>Kepulauan Seribu</option><option>Lampung</option><option>Maluku</option>
+              <option>Maluku Utara</option><option>Nusa Tenggara Barat</option>
+              <option>Nusa Tenggara Timur</option><option>Papua</option><option>Papua Barat</option>
+              <option>Riau</option><option>Sulawesi Barat</option><option>Sulawesi Selatan</option>
+              <option>Sulawesi Tengah</option><option>Sulawesi Tenggara</option>
+              <option>Sulawesi Utara</option><option>Sumatera Barat</option>
+              <option>Sumatera Selatan</option><option>Sumatera Utara</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <label>Kota Store <span class="req">*</span></label>
+            <input type="text" name="kota_store" placeholder="Nama kota" required>
+          </div>
+          <div class="field-row">
+            <label>Kodepos Store</label>
+            <input type="text" name="kodepos_store" placeholder="Kodepos" maxlength="5">
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Nama PIC Store <span class="req">*</span></label>
+            <input type="text" name="nama_pic_store" placeholder="Nama PIC" required>
+          </div>
+          <div class="field-row">
+            <label>No PIC Store <span class="req">*</span></label>
+            <input type="tel" name="no_pic_store" placeholder="08xxxxxxxxxx" required>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Nomor Notifikasi</label>
+            <input type="tel" name="nomor_notifikasi" placeholder="08xxxxxxxxxx">
+          </div>
+          <div class="field-row">
+            <label>Email Notifikasi</label>
+            <input type="email" name="email_notifikasi" placeholder="email@domain.com">
+          </div>
+        </div>
+        <div class="field-row">
+          <label>Nama Bank Rekening <span class="req">*</span></label>
+          <select name="nama_bank" required>
+            <option value="">-- Pilih Bank --</option>
+            <option>BCA</option><option>BRI</option><option>BNI</option><option>Mandiri</option>
+            <option>BSI</option><option>CIMB Niaga</option><option>Danamon</option><option>Permata</option>
+            <option>BTN</option><option>OCBC NISP</option><option>Maybank</option><option>Panin</option>
+            <option>Bukopin</option><option>Bank Mega</option><option>Bank Jatim</option>
+            <option>Bank Jateng</option><option>Bank DKI</option><option>Bank Jabar Banten</option>
+            <option>Bank Sumut</option><option>Bank Aceh</option><option>Bank Riau Kepri</option>
+            <option>Bank Kalsel</option><option>Bank Kaltimtara</option><option>Bank NTB Syariah</option>
+            <option>Bank Sulselbar</option><option>Bank Papua</option><option>Lainnya</option>
+          </select>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Nomor Rekening <span class="req">*</span></label>
+            <input type="text" name="nomor_rekening" placeholder="Nomor rekening" required>
+          </div>
+          <div class="field-row">
+            <label>Nama Rekening <span class="req">*</span></label>
+            <input type="text" name="nama_rekening" placeholder="Nama sesuai rekening" required>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="field-row">
+            <label>Latitude <span class="req">*</span></label>
+            <input type="text" name="latitude" placeholder="-6.2106" required>
+            <span class="hint">Dari Google Maps → klik kanan → Salin koordinat</span>
+          </div>
+          <div class="field-row">
+            <label>Longitude <span class="req">*</span></label>
+            <input type="text" name="longitude" placeholder="106.8187" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <label>Jumlah QRIS <span class="req">*</span></label>
+          <input type="number" name="jumlah_device" placeholder="Contoh: 1" min="1" required>
+        </div>
+        <div class="field-row">
+          <label>Dashboard Merchant</label>
+          <select name="dashboard_merchant">
+            <option value="">-- Pilih --</option>
+            <option value="YA">YA</option><option value="TIDAK">TIDAK</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOTO -->
+    <div class="section-card">
+      <div class="section-header foto">
+        <span class="ico">📸</span><h2>Foto Store</h2>
+      </div>
+      <div class="section-body">
+        <p class="info-box">📌 Upload ke <strong>Google Drive</strong>, lalu paste link di bawah.</p>
+        <div class="field-row">
+          <label>Link Foto Merchant <span class="req">*</span></label>
+          <input type="url" name="foto_merchant" placeholder="https://drive.google.com/..." required>
+          <span class="hint">Foto tampak depan toko/outlet</span>
+        </div>
+        <div class="field-row">
+          <label>Link Foto Plang Merchant <span class="req">*</span></label>
+          <input type="url" name="foto_plang" placeholder="https://drive.google.com/..." required>
+        </div>
+      </div>
+      <div class="submit-section">
+        <button type="submit" class="btn-submit" id="submitAdd">
+          <span>📤</span> Kirim Data Adding Store
+        </button>
+      </div>
+    </div>
+  </form>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const MCC_DETAILS = {
+  FOOD_BEVERAGE:['EATING PLACES & RESTAURANTS','FAST FOOD RESTAURANTS','DRINKING PLACES','CATERERS','GROCERY STORES & SUPERMARKETS'],
+  SHOPPING:['DEPARTMENT STORES','VARIETY STORES','MISC GENERAL MERCHANDISE STORES'],
+  AUTOMOTIVE:['AUTOMOTIVE PARTS & ACCESSORIES STORES','SERVICE STATIONS','CAR WASH','AUTO BODY REPAIR SHOPS'],
+  ENTERTAIMENT:['AMUSEMENT PARKS','MOVIE THEATERS','CONCERT HALLS'],
+  TRANSPORT:['LOCAL COMMUTER TRANSPORT','TAXI & LIMOUSINES','BUS LINES'],
+  TRAVELLING:['AIRLINES','HOTELS & MOTELS','TRAVEL AGENCIES'],
+  FASHION_AND_ACC:['CLOTHING STORES','SHOE STORES','ACCESSORIES STORES'],
+  SPORT:['SPORTING GOODS STORES','BICYCLE SHOPS','FITNESS CENTERS'],
+  HEALTH:['DRUG STORES & PHARMACIES','HOSPITALS','CLINICS & DOCTORS'],
+  EDUCATION:['SCHOOLS','UNIVERSITIES','VOCATIONAL SCHOOLS','ONLINE LEARNING'],
+  'DONATION SOCIAL':['CHARITABLE ORGANIZATIONS','RELIGIOUS ORGANIZATIONS','NON-PROFIT'],
+  'G2P (BANSOS)':['GOVERNMENT SERVICES','SOCIAL ASSISTANCE'],
+  SPBU:['GAS STATIONS'],
+  'P2G NASIONAL DAN DAERAH':['GOVERNMENT PAYMENTS','TAX PAYMENTS','LOCAL GOVERNMENT'],
+  BEAUTY:['BEAUTY SALONS','BARBER SHOPS','SPA & WELLNESS'],
+  EXPEDITION:['COURIER SERVICES','FREIGHT & LOGISTICS','SHIPPING'],
+  ELECTRONIC:['ELECTRONIC STORES','COMPUTER & SOFTWARE','MOBILE PHONES'],
+  SERVICES:['PROFESSIONAL SERVICES','REPAIR SHOPS','CLEANING SERVICES','LAUNDRY'],
+};
+
+function updateMcc(targetId, cat) {
+  const sel = document.getElementById(targetId);
+  sel.innerHTML = '<option value="">-- Pilih Detail --</option>';
+  (MCC_DETAILS[cat]||[]).forEach(d => {
+    const o = document.createElement('option');
+    o.value = d; o.textContent = d; sel.appendChild(o);
+  });
+}
+
+let currentMode = 'new';
+
+function switchMode(mode) {
+  currentMode = mode;
+  const isNew = mode === 'new';
+
+  // Toggle forms
+  document.getElementById('formNew').classList.toggle('active', isNew);
+  document.getElementById('formAdd').classList.toggle('active', !isNew);
+
+  // Toggle buttons
+  document.getElementById('btnNew').className = 'mode-btn' + (isNew ? ' active-new' : '');
+  document.getElementById('btnAdd').className = 'mode-btn' + (!isNew ? ' active-add' : '');
+
+  // Toggle top bar & body
+  document.getElementById('topBar').className = 'top-bar ' + (isNew ? 'mode-new' : 'mode-add');
+  document.getElementById('topLogo').textContent = isNew ? '🆕' : '➕';
+  document.getElementById('topTitle').textContent = isNew ? 'New Merchant' : 'Adding Store';
+  document.getElementById('topSubtitle').textContent = isNew ? 'Pendaftaran merchant baru QRIS GPay' : 'Tambah cabang store QRIS GPay';
+  document.body.className = isNew ? 'mode-new-active' : 'mode-add-active';
+
+  // Reset progress
+  document.getElementById('progressFill').style.width = '0%';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// Ownership toggle (New Merchant)
+document.querySelectorAll('input[name="ownership_status"]').forEach(r => {
+  r.addEventListener('change', function() {
+    document.body.classList.remove('show-individual','show-business');
+    document.getElementById('docPlaceholder').style.display = 'none';
+    document.body.classList.add(this.value === 'Individual' ? 'show-individual' : 'show-business');
+    // Keep mode class
+    document.body.classList.add(currentMode === 'new' ? 'mode-new-active' : 'mode-add-active');
+  });
+});
+
+// Progress
+function updateProgress() {
+  const activeForm = document.getElementById(currentMode === 'new' ? 'formNew' : 'formAdd');
+  const fields = [...activeForm.querySelectorAll('[required]')].filter(f => f.type !== 'radio');
+  const filled = fields.filter(f => f.value.trim()).length;
+  document.getElementById('progressFill').style.width = Math.min(Math.round(filled/fields.length*100),100)+'%';
+}
+document.querySelectorAll('input,select,textarea').forEach(el => {
+  el.addEventListener('input', updateProgress);
+  el.addEventListener('change', updateProgress);
+});
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 4000);
+}
+
+async function handleSubmit(formId, btnId) {
+  const form = document.getElementById(formId);
+  const btn = document.getElementById(btnId);
+
+  let valid = true;
+  form.querySelectorAll('[required]').forEach(f => {
+    if(f.type === 'radio') return;
+    if(!f.value.trim()) { f.style.borderColor = '#ea4335'; valid = false; }
+    else f.style.borderColor = '';
+  });
+
+  // Doc validation for New Merchant
+  if(formId === 'formNew') {
+    const own = document.querySelector('input[name="ownership_status"]:checked');
+    if(!own) { showToast('⚠️ Pilih tipe kepemilikan', 'error'); return; }
+    const cls = own.value === 'Individual' ? '.req-individual' : '.req-business';
+    form.querySelectorAll(cls).forEach(f => {
+      if(!f.value.trim()) { f.style.borderColor = '#ea4335'; valid = false; }
+    });
+  }
+
+  if(!valid) { showToast('⚠️ Lengkapi semua field wajib (*)', 'error'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> Mengirim...';
+
+  try {
+    const data = Object.fromEntries(new FormData(form).entries());
+    const res = await fetch('/api/submit', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    const json = await res.json();
+    if(json.success) {
+      showToast('✅ Data berhasil dikirim!', 'success');
+      form.reset();
+      document.body.classList.remove('show-individual','show-business');
+      document.body.classList.add(currentMode === 'new' ? 'mode-new-active' : 'mode-add-active');
+      if(formId === 'formNew') document.getElementById('docPlaceholder').style.display = '';
+      document.getElementById('progressFill').style.width = '0%';
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    } else {
+      showToast('❌ Gagal: ' + json.message, 'error');
+    }
+  } catch(e) {
+    showToast('❌ Koneksi gagal, coba lagi', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = formId === 'formNew'
+      ? '<span>📤</span> Kirim Data New Merchant'
+      : '<span>📤</span> Kirim Data Adding Store';
+  }
+}
+
+document.getElementById('formNew').addEventListener('submit', e => { e.preventDefault(); handleSubmit('formNew','submitNew'); });
+document.getElementById('formAdd').addEventListener('submit', e => { e.preventDefault(); handleSubmit('formAdd','submitAdd'); });
+
+// Clear red border on input
+document.querySelectorAll('input,select,textarea').forEach(el => {
+  el.addEventListener('input', () => { if(el.style.borderColor === 'rgb(234, 67, 53)') el.style.borderColor = ''; });
+});
+</script>
+</body>
+</html>
